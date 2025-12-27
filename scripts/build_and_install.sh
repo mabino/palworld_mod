@@ -1,28 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Build and install FunnyHat plugin"
+# Colors
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+RED="\033[31m"
+RESET="\033[0m"
+
+echo -e "${BLUE}Build and install FunnyHat plugin${RESET}"
 
 read -p "Enter path to BepInEx plugins folder [~/Palworld/BepInEx/plugins]: " plugins
 plugins=${plugins:-~/Palworld/BepInEx/plugins}
 plugins=$(eval echo "${plugins}")
 
 if [ ! -d "$plugins" ]; then
-  echo "Plugins folder not found: $plugins"
+  echo -e "${YELLOW}Plugins folder not found:${RESET} $plugins"
   read -p "Create it? (y/N) " yn
   if [[ "${yn}" =~ ^[Yy]$ ]]; then
     mkdir -p "$plugins"
+    echo -e "${GREEN}Created:${RESET} $plugins"
   else
-    echo "Abort."
+    echo -e "${RED}Abort.${RESET}"
     exit 1
   fi
 fi
 
 if command -v dotnet >/dev/null 2>&1; then
-  echo "dotnet detected."
+  echo -e "${GREEN}dotnet detected.${RESET}"
   read -p "Use dotnet CLI to build? (Y/n) " use
   use=${use:-Y}
   if [[ "$use" =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}Preparing temporary build workspace...${RESET}"
     tmp="./scripts/.tmp_build"
     rm -rf "$tmp"
     mkdir -p "$tmp"
@@ -54,26 +63,28 @@ if command -v dotnet >/dev/null 2>&1; then
 </Project>
 EOF
 
-    echo "Building..."
+    echo -e "${BLUE}Building...${RESET}"
     if ! dotnet build "$tmp" -c Release; then
-      echo "dotnet build failed. Check paths and target framework."
+      echo -e "${RED}dotnet build failed.${RESET} Check paths and target framework."
       exit 1
     fi
 
     dll=$(find "$tmp/bin/Release" -type f -name "FunnyHat.dll" | head -n1)
     if [ -z "$dll" ]; then
-      echo "Built DLL not found."
+      echo -e "${RED}Built DLL not found.${RESET}"
       exit 1
     fi
 
     cp "$dll" "$plugins/"
-    echo "Copied $dll to $plugins"
-    echo "Build and install complete."
+    echo -e "${GREEN}Copied:${RESET} $dll to $plugins"
+    echo -e "${GREEN}Build and install complete.${RESET}"
+    # Clean up temporary workspace
+    rm -rf "$tmp"
     exit 0
   fi
 fi
 
-echo "dotnet CLI not used or not available. Follow these manual steps:"
+echo -e "${YELLOW}dotnet CLI not used or not available.${RESET} Follow these manual steps:"
 echo "1) Create a Class Library project in Visual Studio targeting the game's runtime (e.g., .NET Framework 4.x)."
 echo "2) Add mod/AddFunnyHat.cs to the project and reference UnityEngine.dll and BepInEx.dll."
 echo "3) Build the project and copy the resulting DLL into $plugins"
